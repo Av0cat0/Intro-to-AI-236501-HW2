@@ -153,7 +153,63 @@ class AgentAlphaBeta(Agent):
 class AgentExpectimax(Agent):
     # TODO: section d : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
-        raise NotImplementedError()
+        self.end_time = time.time() + 0.8 * time_limit - 0.05
+        operators = env.get_legal_operators(agent_id)
+        children = [env.clone() for _ in operators]
+        for child, op in zip(children, operators):
+            child.apply_operator(agent_id, op)
+        d = 2
+        step = operators[0]
+
+        while True:
+            if time.time() > self.end_time:
+                break
+            try:
+                children_results = [self.RB_expectimax(child, 1 - agent_id, d - 1, agent_id) for child in children]
+                max_result = max(children_results)
+                index_selected = children_results.index(max_result)
+                step = operators[index_selected]
+                d += 2
+            except TimeoutError:
+                break
+
+        return step
+
+    def RB_expectimax(self, env, robot_id, d, turn):
+        if time.time() > self.end_time:
+            raise TimeoutError
+
+        if env.done() or d == 0 or env.get_robot(1 - turn).battery == 0:
+            return smart_heuristic(env, robot_id)
+
+        operators = env.get_legal_operators(robot_id)
+        children = [env.clone() for _ in operators]
+        for child, op in zip(children, operators):
+            child.apply_operator(robot_id, op)
+
+        if turn == robot_id:
+            cur_max = - float('inf')
+            for child in children:
+                val = self.RB_expectimax(child, 1 - robot_id, d - 1, turn)
+                cur_max = max(val, cur_max)
+            return cur_max
+        else:
+            probabilities = self.calc_prob(operators)
+            sum = 0
+            for child, prob in zip(children, probabilities):
+                sum += prob * self.RB_expectimax(child, 1 - robot_id, d - 1, turn)
+            return sum
+
+    def calc_prob(self, operations):
+        sum = len(operations)
+        if "pick up" in operations:
+            sum+=1
+        if "move east" in operations:
+            sum+=1
+        return [
+            2 / sum if op == "pick up" or op == "move east" else 1 / sum
+            for op in operations
+        ]
 
 
 # here you can check specific paths to get to know the environment
