@@ -1,16 +1,15 @@
 from Agent import Agent, AgentGreedy
 from WarehouseEnv import WarehouseEnv, manhattan_distance
 import random
+import time
 
 
-# TODO: section a : 3
 def smart_heuristic(env: WarehouseEnv, robot_id: int):
     robot = env.get_robot(robot_id)
     other_robot = env.get_robot((robot_id + 1) % 2)
 
     # find nearest charging station
     nearest_charge_station = min(env.charge_stations, key=lambda cs:manhattan_distance(robot.position, cs.position))
-    cost_to_station = manhattan_distance(nearest_charge_station.position, robot.position)
 
     if robot.package is not None:
         # if the robot is carrying a package
@@ -36,12 +35,7 @@ def smart_heuristic(env: WarehouseEnv, robot_id: int):
             to_dest_cost = manhattan_distance(nearest_package.position, nearest_package.destination)
             path_cost = to_package_cost + to_dest_cost
 
-    # decide - go to charge station or proceed to destination
-    if path_cost > robot.battery and robot.battery <= cost_to_station and robot.credit < other_robot.credit:
-        path_cost = cost_to_station
-        reward = - robot.credit
-
-    return robot.credit * 75 + (reward / (path_cost + 1))*robot.battery
+    return robot.credit * 75 + (reward / (path_cost + 1))+robot.battery
 
 
 class AgentGreedyImproved(AgentGreedy):
@@ -52,8 +46,52 @@ class AgentGreedyImproved(AgentGreedy):
 class AgentMinimax(Agent):
     # TODO: section b : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
-        raise NotImplementedError()
+        self.end_time = time.time() + 0.7 * time_limit - 0.05
+        operators = env.get_legal_operators(agent_id)
+        children = [env.clone() for _ in operators]
+        for child, op in zip(children, operators):
+            child.apply_operator(agent_id, op)
+        d = 2
+        step = operators[0]
 
+        while True:
+            if time.time() > self.end_time:
+                break
+            try:
+                children_results = [self.RB_minimax(child, 1 - agent_id, d - 1, agent_id) for child in children]
+                max_result = max(children_results)
+                index_selected = children_results.index(max_result)
+                step = operators[index_selected]
+                d += 2
+            except TimeoutError:
+                break
+
+        return step
+
+    def RB_minimax(self, env, robot_id, d, turn):
+        if time.time() > self.end_time:
+            raise TimeoutError
+
+        if env.done() or d == 0 or env.get_robot(1-turn).battery==0:
+            return smart_heuristic(env, robot_id)
+
+        operators = env.get_legal_operators(robot_id)
+        children = [env.clone() for _ in operators]
+        for child, op in zip(children, operators):
+            child.apply_operator(robot_id, op)
+
+        if turn == robot_id:
+            cur_max = - float('inf')
+            for child in children:
+                val = self.RB_minimax(child, 1-robot_id , d-1, turn)
+                cur_max = max(val, cur_max)
+            return cur_max
+        else:
+            cur_min = float('inf')
+            for child in children:
+                val = self.RB_minimax(child, 1-robot_id, d-1, turn)
+                cur_min = min(val, cur_min)
+            return cur_min
 
 class AgentAlphaBeta(Agent):
     # TODO: section c : 1
