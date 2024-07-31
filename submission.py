@@ -6,10 +6,6 @@ import time
 
 def smart_heuristic(env: WarehouseEnv, robot_id: int):
     robot = env.get_robot(robot_id)
-    other_robot = env.get_robot((robot_id + 1) % 2)
-
-    # find nearest charging station
-    nearest_charge_station = min(env.charge_stations, key=lambda cs:manhattan_distance(robot.position, cs.position))
 
     if robot.package is not None:
         # if the robot is carrying a package
@@ -19,10 +15,6 @@ def smart_heuristic(env: WarehouseEnv, robot_id: int):
 
 
     else:
-        is_dropoff = next((package for package in env.packages if package.destination == robot.position), None)
-        if is_dropoff is not None and is_dropoff.on_board == False:
-            return 2 * manhattan_distance(is_dropoff.position, is_dropoff.destination)
-
         # the robot is not carrying a package, find the nearest one
         available_packages = [package for package in env.packages if package.on_board]
         if not available_packages:
