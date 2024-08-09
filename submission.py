@@ -36,9 +36,8 @@ class AgentGreedyImproved(AgentGreedy):
 
 
 class AgentMinimax(Agent):
-    # TODO: section b : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
-        self.end_time = time.time() + 0.8 * time_limit - 0.05
+        self.end_time = time.time() + 0.8 * time_limit
         operators = env.get_legal_operators(agent_id)
         children = [env.clone() for _ in operators]
         for child, op in zip(children, operators):
@@ -86,9 +85,8 @@ class AgentMinimax(Agent):
             return cur_min
 
 class AgentAlphaBeta(Agent):
-    # TODO: section c : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
-        self.end_time = time.time() + 0.8 * time_limit - 0.05
+        self.end_time = time.time() + 0.8 * time_limit
         operators = env.get_legal_operators(agent_id)
         children = [env.clone() for _ in operators]
         for child, op in zip(children, operators):
@@ -143,9 +141,8 @@ class AgentAlphaBeta(Agent):
 
 
 class AgentExpectimax(Agent):
-    # TODO: section d : 1
     def run_step(self, env: WarehouseEnv, agent_id, time_limit):
-        self.end_time = time.time() + 0.8 * time_limit - 0.05
+        self.end_time = time.time() + 0.8 * time_limit
         operators = env.get_legal_operators(agent_id)
         children = [env.clone() for _ in operators]
         for child, op in zip(children, operators):
